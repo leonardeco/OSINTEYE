@@ -6,6 +6,7 @@ import { DashboardView } from './components/DashboardView';
 import { CatalogView } from './components/CatalogView';
 import { InvestigationsView } from './components/InvestigationsView';
 import { SettingsView } from './components/SettingsView';
+import { ReportsView } from './components/ReportsView';
 import { ChatPanel } from './components/ChatPanel';
 import { ToastContainer } from './components/Toast';
 import { AppProvider, useApp } from './context/AppContext';
@@ -147,6 +148,8 @@ function App() {
             isLoading={isLoadingInvestigations}
           />
         )}
+
+        {currentView === 'reports' && <ReportsView />}
       </div>
 
       <ChatPanel />
