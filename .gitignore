@@ -1,0 +1,21 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.sqlite3
+.env
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/WixTools/
+
+# OS
+.DS_Store
+Thumbs.db
