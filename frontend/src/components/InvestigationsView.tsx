@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { API_BASE_URL, INVESTIGATION_TYPES } from '../types';
 import type { Investigation, InvestigationType } from '../types';
 import { Spinner } from './Spinner';
 import { showToast } from './Toast';
 import ForceGraph2D from 'react-force-graph-2d';
+import { buildReportHtml } from '../lib/report';
+import { ZoomIn, ZoomOut } from 'lucide-react';
 
 interface InvestigationsViewProps {
   investigations: Investigation[];
@@ -11,12 +13,16 @@ interface InvestigationsViewProps {
   isLoading: boolean;
 }
 
+const EXPECTED_MODULE_COUNTS: Record<string, number> = { domain: 7, ip: 4, email: 1, phone: 1 };
+
 export function InvestigationsView({ investigations, onRefresh, isLoading }: InvestigationsViewProps) {
   const [newTarget, setNewTarget] = useState('');
   const [newName, setNewName] = useState('');
   const [investigationType, setInvestigationType] = useState<InvestigationType>('domain');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [graphData, setGraphData] = useState<{ nodes: any[]; links: any[] } | null>(null);
+  const [activeTab, setActiveTab] = useState<Record<string, string>>({});
+  const fgRef = useRef<any>(null);
 
   const validateTarget = (target: string, type: InvestigationType): string | null => {
     const trimmed = target.trim();
@@ -68,43 +74,7 @@ export function InvestigationsView({ investigations, onRefresh, isLoading }: Inv
   };
 
   const exportInvestigation = (inv: Investigation) => {
-    const reportHtml = `
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-        <meta charset="UTF-8">
-        <title>Reporte OSINTEYE: ${inv.target}</title>
-        <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 40px; }
-          .container { max-width: 900px; margin: 0 auto; background: #1e293b; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-          h1 { color: #38bdf8; border-bottom: 2px solid #334155; padding-bottom: 10px; }
-          h2 { color: #10b981; margin-top: 30px; }
-          .meta { background: #334155; padding: 15px; border-radius: 8px; margin-bottom: 30px; }
-          .module { margin-bottom: 20px; padding: 15px; border: 1px solid #475569; border-radius: 8px; background: #0f172a; }
-          pre { background: #000; padding: 15px; border-radius: 6px; overflow-x: auto; color: #a5b4fc; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1>👁️ OSINTEYE Intelligence Report</h1>
-          <div class="meta">
-            <strong>Nombre del Caso:</strong> ${inv.name}<br>
-            <strong>Objetivo:</strong> ${inv.target}<br>
-            <strong>Fecha de Escaneo:</strong> ${new Date(inv.created_at).toLocaleString()}<br>
-            <strong>Estado Global:</strong> ${inv.status.toUpperCase()}
-          </div>
-          <h2>Resultados de Módulos</h2>
-          ${inv.results.map(r => `
-            <div class="module">
-              <h3 style="margin-top: 0; color: #f472b6;">Módulo: ${r.module_name.toUpperCase()}</h3>
-              <div><strong>Estado:</strong> ${r.status}</div>
-              <pre>${JSON.stringify(r.raw_data, null, 2)}</pre>
-            </div>
-          `).join('')}
-        </div>
-      </body>
-      </html>
-    `;
+    const reportHtml = buildReportHtml(inv);
 
     const blob = new Blob([reportHtml], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
@@ -279,25 +249,70 @@ export function InvestigationsView({ investigations, onRefresh, isLoading }: Inv
                 </div>
               </div>
 
-              <div className="results-grid">
-                {inv.results?.map(res => (
-                  <div key={res.id} className="result-card">
-                    <h4 className="result-module-name">{getModuleIcon(res.module_name)}</h4>
-                    <div className="result-content">
-                      {res.status === 'error' ? (
-                        <span className="result-error">Error: {res.raw_data?.error || 'Error desconocido'}</span>
-                      ) : (
-                        <ResultRenderer moduleName={res.module_name} rawData={res.raw_data} />
-                      )}
-                    </div>
+              {inv.status === 'running' && (
+                <div className="investigation-progress">
+                  <div className="progress-label">
+                    {inv.results.length}/{EXPECTED_MODULE_COUNTS[inv.investigation_type ?? ''] ?? inv.results.length} módulos completados
                   </div>
-                ))}
-                {(!inv.results || inv.results.length === 0) && inv.status === 'running' && (
+                  <progress
+                    className="progress-bar"
+                    value={inv.results.length}
+                    max={EXPECTED_MODULE_COUNTS[inv.investigation_type ?? ''] ?? inv.results.length}
+                  />
+                </div>
+              )}
+
+              {inv.results && inv.results.length > 0 ? (
+                (() => {
+                  const currentActive = activeTab[inv.id] ?? inv.results[0].module_name;
+                  const activeResult = inv.results.find(r => r.module_name === currentActive) ?? inv.results[0];
+                  return (
+                    <div className="results-grid">
+                      <div className="result-tabs">
+                        {inv.results.map(res => (
+                          <button
+                            key={res.id}
+                            type="button"
+                            className={`result-tab ${currentActive === res.module_name ? 'active' : ''}`}
+                            onClick={() => setActiveTab(prev => ({ ...prev, [inv.id]: res.module_name }))}
+                          >
+                            {getModuleIcon(res.module_name)}
+                            <span className="result-tab-time">{new Date(res.created_at).toLocaleTimeString()}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="result-card">
+                        <div className="result-panel-header">
+                          <h4 className="result-module-name">{getModuleIcon(activeResult.module_name)}</h4>
+                          <button
+                            type="button"
+                            className="btn-outline"
+                            onClick={() => {
+                              navigator.clipboard.writeText(JSON.stringify(activeResult.raw_data, null, 2));
+                              showToast('Copiado al portapapeles', 'success');
+                            }}
+                          >
+                            📋 Copiar
+                          </button>
+                        </div>
+                        <div className="result-content">
+                          {activeResult.status === 'error' ? (
+                            <span className="result-error">Error: {activeResult.raw_data?.error || 'Error desconocido'}</span>
+                          ) : (
+                            <ResultRenderer moduleName={activeResult.module_name} rawData={activeResult.raw_data} />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                inv.status === 'running' && (
                   <div className="empty-state">
                     <Spinner size={24} label="Escaneando objetivo..." />
                   </div>
-                )}
-              </div>
+                )
+              )}
             </div>
           ))}
           {investigations.length === 0 && (
@@ -311,10 +326,29 @@ export function InvestigationsView({ investigations, onRefresh, isLoading }: Inv
         <div className="modal-overlay">
           <div className="modal-header">
             <h2 className="modal-title">Visualización de Inteligencia (OSINT Graph)</h2>
-            <button onClick={() => setGraphData(null)} className="modal-close">✖</button>
+            <div className="modal-header-actions">
+              <button
+                type="button"
+                onClick={() => fgRef.current?.zoom(fgRef.current.zoom() * 1.3, 300)}
+                className="btn-outline"
+                title="Acercar"
+              >
+                <ZoomIn size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => fgRef.current?.zoom(fgRef.current.zoom() / 1.3, 300)}
+                className="btn-outline"
+                title="Alejar"
+              >
+                <ZoomOut size={16} />
+              </button>
+              <button onClick={() => setGraphData(null)} className="modal-close">✖</button>
+            </div>
           </div>
           <div className="modal-body">
             <ForceGraph2D
+              ref={fgRef}
               graphData={graphData}
               nodeLabel="label"
               nodeAutoColorBy="group"
