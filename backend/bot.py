@@ -11,7 +11,7 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "PUT_YOUR_TOKEN_HERE")
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_message = (
-        "¡Hola! Soy tu Asistente OSINTOJO 👁️\n\n"
+        "¡Hola! Soy tu Asistente OSINTEYE 👁️\n\n"
         "Puedo ayudarte a encontrar herramientas OSINT en el catálogo.\n"
         "Dime, ¿qué tipo de investigación quieres realizar?"
     )
@@ -47,7 +47,7 @@ def main():
     # Messages
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    print("Iniciando Bot de Telegram de OSINTOJO...")
+    print("Iniciando Bot de Telegram de OSINTEYE...")
     application.run_polling()
 
 if __name__ == '__main__':
