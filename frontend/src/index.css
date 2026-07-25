@@ -24,6 +24,18 @@
   --info-bg: rgba(99, 102, 241, 0.2);
 }
 
+[data-theme="light"] {
+  --bg-gradient-start: #f1f5f9;
+  --bg-gradient-end: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(15, 23, 42, 0.1);
+  --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+  --card-bg: rgba(255, 255, 255, 0.6);
+  --card-hover: rgba(241, 245, 249, 0.9);
+}
+
 /* ============================================
    Base
    ============================================ */
@@ -899,6 +911,57 @@ h1, h2, h3, h4, h5, h6 {
 .chat-send:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ============================================
+   Chat Panel (slide-in)
+   ============================================ */
+
+.chat-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 400px;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
+}
+
+.chat-panel.open {
+  transform: translateX(0);
+}
+
+.chat-timestamp {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  margin-top: 4px;
+  display: block;
+}
+
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 16px 12px;
+}
+
+.chat-suggestion-chip {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  border-radius: 16px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.chat-suggestion-chip:hover {
+  background: rgba(99, 102, 241, 0.15);
+  color: white;
 }
 
 /* ============================================

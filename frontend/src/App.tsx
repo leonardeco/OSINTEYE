@@ -5,7 +5,7 @@ import { Sidebar } from './components/Sidebar';
 import { CatalogView } from './components/CatalogView';
 import { InvestigationsView } from './components/InvestigationsView';
 import { SettingsView } from './components/SettingsView';
-import { ChatModal } from './components/ChatModal';
+import { ChatPanel } from './components/ChatPanel';
 import { ToastContainer } from './components/Toast';
 import { AppProvider, useApp } from './context/AppContext';
 
@@ -22,7 +22,6 @@ function App() {
     isLoadingSources,
     investigations,
     isLoadingInvestigations,
-    isChatOpen,
   } = state;
 
   // Fetch categories on mount
@@ -147,7 +146,7 @@ function App() {
         )}
       </div>
 
-      <ChatModal isOpen={isChatOpen} onClose={() => dispatch({ type: 'SET_CHAT_OPEN', open: false })} />
+      <ChatPanel />
       <ToastContainer />
     </div>
   );

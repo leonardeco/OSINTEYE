@@ -23,6 +23,7 @@ export interface Investigation {
   status: string;
   created_at: string;
   results: ScanResult[];
+  investigation_type?: string;
 }
 
 export interface ScanResult {
@@ -36,6 +37,7 @@ export interface ScanResult {
 export interface ChatMessage {
   sender: 'user' | 'ai';
   text: string;
+  timestamp?: string;
 }
 
 export type ViewType = 'catalog' | 'investigations' | 'settings' | 'dashboard' | 'reports';

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BookOpen, Search, Settings, LayoutDashboard, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Category, Investigation, ViewType } from '../types';
 import { useApp } from '../context/AppContext';
+import { ThemeToggle } from './ThemeToggle';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -38,6 +39,7 @@ export function Sidebar({
         >
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
+        <ThemeToggle />
       </div>
 
       <div className="nav-tabs">
