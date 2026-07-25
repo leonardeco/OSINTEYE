@@ -19,3 +19,5 @@ src-tauri/WixTools/
 # OS
 .DS_Store
 Thumbs.db
+
+docs/hydraia/.heartbeats/
