@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import './index.css';
 import { API_BASE_URL } from './types';
 import { Sidebar } from './components/Sidebar';
+import { DashboardView } from './components/DashboardView';
 import { CatalogView } from './components/CatalogView';
 import { InvestigationsView } from './components/InvestigationsView';
 import { SettingsView } from './components/SettingsView';
@@ -117,6 +118,8 @@ function App() {
       />
 
       <div className="main-content">
+        {currentView === 'dashboard' && <DashboardView />}
+
         {currentView === 'settings' && (
           <SettingsView
             anthropicKey={anthropicKey}
