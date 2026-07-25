@@ -159,6 +159,32 @@ h1, h2, h3, h4, h5, h6 {
   gap: 2px;
 }
 
+.sidebar-collapsed {
+  width: 72px;
+  min-width: 72px;
+  padding: 24px 12px;
+}
+
+.sidebar-collapsed .sidebar-subtitle,
+.sidebar-collapsed .sidebar-categories,
+.sidebar-collapsed .nav-tab span.nav-tab-label {
+  display: none;
+}
+
+.sidebar-collapse-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-collapse-btn:hover {
+  color: white;
+}
+
 /* ============================================
    Navigation Tabs
    ============================================ */
