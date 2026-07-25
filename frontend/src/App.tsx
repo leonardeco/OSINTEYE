@@ -1,44 +1,38 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import './index.css';
 import { API_BASE_URL } from './types';
-import type { Category, Source, Investigation, ViewType } from './types';
 import { Sidebar } from './components/Sidebar';
 import { CatalogView } from './components/CatalogView';
 import { InvestigationsView } from './components/InvestigationsView';
 import { SettingsView } from './components/SettingsView';
 import { ChatModal } from './components/ChatModal';
 import { ToastContainer } from './components/Toast';
+import { AppProvider, useApp } from './context/AppContext';
 
 function App() {
-  // View State
-  const [currentView, setCurrentView] = useState<ViewType>('catalog');
-
-  // Config State
-  const [anthropicKey, setAnthropicKey] = useState('');
-  const [shodanKey, setShodanKey] = useState('');
-
-  // Catalog State
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [allSources, setAllSources] = useState<Source[]>([]);
-  const [search, setSearch] = useState('');
-  const [isLoadingSources, setIsLoadingSources] = useState(false);
-
-  // Investigations State
-  const [investigations, setInvestigations] = useState<Investigation[]>([]);
-  const [isLoadingInvestigations, setIsLoadingInvestigations] = useState(false);
-
-  // Chat Modal State
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const { state, dispatch } = useApp();
+  const {
+    currentView,
+    anthropicKey,
+    shodanKey,
+    categories,
+    selectedCategory,
+    allSources,
+    search,
+    isLoadingSources,
+    investigations,
+    isLoadingInvestigations,
+    isChatOpen,
+  } = state;
 
   // Fetch categories on mount
   useEffect(() => {
     fetch(`${API_BASE_URL}/categories/?limit=100`)
       .then(res => res.json())
-      .then((data: Category[]) => {
-        setCategories(data);
+      .then((data: import('./types').Category[]) => {
+        dispatch({ type: 'SET_CATEGORIES', categories: data });
         if (data.length > 0) {
-          setSelectedCategory(data[0]);
+          dispatch({ type: 'SELECT_CATEGORY', category: data[0] });
         }
       })
       .catch(err => console.error("Error fetching categories:", err));
@@ -46,16 +40,16 @@ function App() {
 
   // Fetch ALL sources on mount for global search
   useEffect(() => {
-    setIsLoadingSources(true);
+    dispatch({ type: 'SET_LOADING_SOURCES', loading: true });
     fetch(`${API_BASE_URL}/sources/?limit=1000`)
       .then(res => res.json())
       .then(data => {
-        setAllSources(data);
-        setIsLoadingSources(false);
+        dispatch({ type: 'SET_SOURCES', sources: data });
+        dispatch({ type: 'SET_LOADING_SOURCES', loading: false });
       })
       .catch(err => {
         console.error("Error fetching sources:", err);
-        setIsLoadingSources(false);
+        dispatch({ type: 'SET_LOADING_SOURCES', loading: false });
       });
   }, []);
 
@@ -90,8 +84,11 @@ function App() {
       const data = await res.json();
       const anthropicSetting = data.find((s: any) => s.key === 'anthropic_api_key');
       const shodanSetting = data.find((s: any) => s.key === 'shodan_api_key');
-      if (anthropicSetting) setAnthropicKey(anthropicSetting.value);
-      if (shodanSetting) setShodanKey(shodanSetting.value);
+      dispatch({
+        type: 'SET_KEYS',
+        anthropicKey: anthropicSetting ? anthropicSetting.value : anthropicKey,
+        shodanKey: shodanSetting ? shodanSetting.value : shodanKey,
+      });
     } catch (err) {
       console.error(err);
     }
@@ -99,13 +96,11 @@ function App() {
 
   const fetchInvestigations = useCallback(async () => {
     try {
-      setIsLoadingInvestigations(prev => {
-        // Only show loading spinner on first load, not on auto-refresh
-        return prev;
-      });
+      // Only show loading spinner on first load, not on auto-refresh
+      // (kept as a no-op dispatch to preserve original behavior/comment intent)
       const res = await fetch(`${API_BASE_URL}/investigations/`);
       const data = await res.json();
-      setInvestigations(data);
+      dispatch({ type: 'SET_INVESTIGATIONS', investigations: data });
     } catch (err) {
       console.error(err);
     }
@@ -115,11 +110,11 @@ function App() {
     <div className="app-container">
       <Sidebar
         currentView={currentView}
-        onViewChange={setCurrentView}
+        onViewChange={(view) => dispatch({ type: 'SET_VIEW', view })}
         categories={categories}
         selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
-        onClearSearch={() => setSearch('')}
+        onSelectCategory={(category) => dispatch({ type: 'SELECT_CATEGORY', category })}
+        onClearSearch={() => dispatch({ type: 'SET_SEARCH', search: '' })}
       />
 
       <div className="main-content">
@@ -127,8 +122,8 @@ function App() {
           <SettingsView
             anthropicKey={anthropicKey}
             shodanKey={shodanKey}
-            onAnthropicKeyChange={setAnthropicKey}
-            onShodanKeyChange={setShodanKey}
+            onAnthropicKeyChange={(key) => dispatch({ type: 'SET_KEYS', anthropicKey: key, shodanKey })}
+            onShodanKeyChange={(key) => dispatch({ type: 'SET_KEYS', anthropicKey, shodanKey: key })}
           />
         )}
 
@@ -137,8 +132,8 @@ function App() {
             selectedCategory={selectedCategory}
             sources={allSources}
             search={search}
-            onSearchChange={setSearch}
-            onOpenChat={() => setIsChatOpen(true)}
+            onSearchChange={(value) => dispatch({ type: 'SET_SEARCH', search: value })}
+            onOpenChat={() => dispatch({ type: 'SET_CHAT_OPEN', open: true })}
             isLoading={isLoadingSources}
           />
         )}
@@ -152,10 +147,18 @@ function App() {
         )}
       </div>
 
-      <ChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      <ChatModal isOpen={isChatOpen} onClose={() => dispatch({ type: 'SET_CHAT_OPEN', open: false })} />
       <ToastContainer />
     </div>
   );
 }
 
-export default App;
+function AppRoot() {
+  return (
+    <AppProvider>
+      <App />
+    </AppProvider>
+  );
+}
+
+export default AppRoot;
