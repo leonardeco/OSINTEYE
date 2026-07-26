@@ -38,7 +38,7 @@ export interface ChatMessage {
   text: string;
 }
 
-export type ViewType = 'catalog' | 'investigations' | 'settings';
+export type ViewType = 'dashboard' | 'catalog' | 'investigations' | 'reports' | 'settings';
 
 export const INVESTIGATION_TYPES = [
   { key: 'domain' as const, label: '🌐 Dominio', placeholder: 'ej. google.com', icon: '🌐' },

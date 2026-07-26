@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Copy, Check, Network, Download, Trash2 } from 'lucide-react';
 import { API_BASE_URL, INVESTIGATION_TYPES } from '../types';
 import type { Investigation, InvestigationType } from '../types';
 import { Spinner } from './Spinner';
@@ -17,6 +18,18 @@ export function InvestigationsView({ investigations, onRefresh, isLoading }: Inv
   const [investigationType, setInvestigationType] = useState<InvestigationType>('domain');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [graphData, setGraphData] = useState<{ nodes: any[]; links: any[] } | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyToClipboard = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      showToast('Copiado al portapapeles', 'success');
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      showToast('No se pudo copiar', 'error');
+    }
+  };
 
   const validateTarget = (target: string, type: InvestigationType): string | null => {
     const trimmed = target.trim();
@@ -262,15 +275,23 @@ export function InvestigationsView({ investigations, onRefresh, isLoading }: Inv
                 </div>
                 <div className="investigation-actions">
                   {inv.status === 'completed' && (
-                    <button onClick={() => generateGraphData(inv)} className="btn-outline btn-primary-outline">
-                      🕸️ Ver Grafo
+                    <button onClick={() => generateGraphData(inv)} className="btn-outline btn-primary-outline" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Network size={14} /> Ver Grafo
                     </button>
                   )}
-                  <button onClick={() => exportInvestigation(inv)} className="btn-outline">
-                    💾 Exportar
+                  <button onClick={() => exportInvestigation(inv)} className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Download size={14} /> Exportar
                   </button>
-                  <button onClick={() => handleDeleteInvestigation(inv.id)} className="btn-outline btn-danger-outline" style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }}>
-                    🗑️ Eliminar
+                  <button
+                    onClick={() => copyToClipboard(inv.target, `target-${inv.id}`)}
+                    className="btn-outline"
+                    title="Copiar objetivo"
+                    style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    {copiedId === `target-${inv.id}` ? <Check size={14} color="#22c55e" /> : <Copy size={14} />}
+                  </button>
+                  <button onClick={() => handleDeleteInvestigation(inv.id)} className="btn-outline" style={{ borderColor: 'var(--danger)', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Trash2 size={14} />
                   </button>
                   <span className={`badge ${inv.status === 'completed' ? 'badge-success' : inv.status === 'running' ? 'badge-warning' : 'badge-info'}`}>
                     {inv.status === 'running' && <span className="pulse-dot" />}
@@ -279,10 +300,39 @@ export function InvestigationsView({ investigations, onRefresh, isLoading }: Inv
                 </div>
               </div>
 
+              {/* Progress bar */}
+              {inv.results && inv.results.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#94a3b8', marginBottom: 6 }}>
+                    <span>{inv.results.filter(r => r.status !== 'error').length}/{inv.results.length} módulos exitosos</span>
+                    <span>{Math.round((inv.results.filter(r => r.status !== 'error').length / inv.results.length) * 100)}%</span>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      borderRadius: 4,
+                      background: 'linear-gradient(90deg, #6366f1, #22c55e)',
+                      width: `${(inv.results.filter(r => r.status !== 'error').length / inv.results.length) * 100}%`,
+                      transition: 'width 0.5s ease',
+                    }} />
+                  </div>
+                </div>
+              )}
+
               <div className="results-grid">
                 {inv.results?.map(res => (
                   <div key={res.id} className="result-card">
-                    <h4 className="result-module-name">{getModuleIcon(res.module_name)}</h4>
+                    <h4 className="result-module-name">
+                      {getModuleIcon(res.module_name)}
+                      <button
+                        onClick={() => copyToClipboard(JSON.stringify(res.raw_data, null, 2), `module-${res.id}`)}
+                        className="btn-outline"
+                        style={{ marginLeft: 'auto', padding: '2px 6px', display: 'flex', alignItems: 'center' }}
+                        title="Copiar datos"
+                      >
+                        {copiedId === `module-${res.id}` ? <Check size={12} color="#22c55e" /> : <Copy size={12} />}
+                      </button>
+                    </h4>
                     <div className="result-content">
                       {res.status === 'error' ? (
                         <span className="result-error">Error: {res.raw_data?.error || 'Error desconocido'}</span>

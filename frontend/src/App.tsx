@@ -2,16 +2,21 @@ import { useState, useEffect, useCallback } from 'react';
 import './index.css';
 import { API_BASE_URL } from './types';
 import type { Category, Source, Investigation, ViewType } from './types';
+import { AppProvider, useApp } from './context/AppContext';
 import { Sidebar } from './components/Sidebar';
+import { DashboardView } from './components/DashboardView';
 import { CatalogView } from './components/CatalogView';
 import { InvestigationsView } from './components/InvestigationsView';
+import { ReportsView } from './components/ReportsView';
 import { SettingsView } from './components/SettingsView';
-import { ChatModal } from './components/ChatModal';
+import { ChatDrawer } from './components/ChatDrawer';
 import { ToastContainer } from './components/Toast';
 
-function App() {
+function AppInner() {
+  const { setInvestigationsCount, setActiveCount } = useApp();
+
   // View State
-  const [currentView, setCurrentView] = useState<ViewType>('catalog');
+  const [currentView, setCurrentView] = useState<ViewType>('dashboard');
 
   // Config State
   const [anthropicKey, setAnthropicKey] = useState('');
@@ -26,9 +31,9 @@ function App() {
 
   // Investigations State
   const [investigations, setInvestigations] = useState<Investigation[]>([]);
-  const [isLoadingInvestigations, setIsLoadingInvestigations] = useState(false);
+  const [isLoadingInvestigations] = useState(false);
 
-  // Chat Modal State
+  // Chat Drawer State
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Fetch categories on mount
@@ -37,11 +42,9 @@ function App() {
       .then(res => res.json())
       .then((data: Category[]) => {
         setCategories(data);
-        if (data.length > 0) {
-          setSelectedCategory(data[0]);
-        }
+        if (data.length > 0) setSelectedCategory(data[0]);
       })
-      .catch(err => console.error("Error fetching categories:", err));
+      .catch(err => console.error('Error fetching categories:', err));
   }, []);
 
   // Fetch ALL sources on mount for global search
@@ -54,24 +57,23 @@ function App() {
         setIsLoadingSources(false);
       })
       .catch(err => {
-        console.error("Error fetching sources:", err);
+        console.error('Error fetching sources:', err);
         setIsLoadingSources(false);
       });
   }, []);
 
+  // Fetch investigations on mount
+  useEffect(() => {
+    fetchInvestigations();
+  }, []);
+
   // Fetch settings/investigations when view changes
   useEffect(() => {
-    if (currentView === 'investigations') {
-      fetchInvestigations();
-    } else if (currentView === 'settings') {
-      fetchSettings();
-    }
+    if (currentView === 'settings') fetchSettings();
   }, [currentView]);
 
   // Auto-refresh investigations while any are running/pending
   useEffect(() => {
-    if (currentView !== 'investigations') return;
-
     const hasActive = investigations.some(inv =>
       inv.status === 'running' || inv.status === 'pending'
     );
@@ -82,7 +84,13 @@ function App() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [currentView, investigations]);
+  }, [investigations]);
+
+  // Sync global counts
+  useEffect(() => {
+    setInvestigationsCount(investigations.length);
+    setActiveCount(investigations.filter(i => i.status === 'running' || i.status === 'pending').length);
+  }, [investigations, setInvestigationsCount, setActiveCount]);
 
   const fetchSettings = async () => {
     try {
@@ -99,10 +107,6 @@ function App() {
 
   const fetchInvestigations = useCallback(async () => {
     try {
-      setIsLoadingInvestigations(prev => {
-        // Only show loading spinner on first load, not on auto-refresh
-        return prev;
-      });
       const res = await fetch(`${API_BASE_URL}/investigations/`);
       const data = await res.json();
       setInvestigations(data);
@@ -110,6 +114,8 @@ function App() {
       console.error(err);
     }
   }, []);
+
+  const activeCount = investigations.filter(i => i.status === 'running' || i.status === 'pending').length;
 
   return (
     <div className="app-container">
@@ -120,15 +126,17 @@ function App() {
         selectedCategory={selectedCategory}
         onSelectCategory={setSelectedCategory}
         onClearSearch={() => setSearch('')}
+        activeCount={activeCount}
+        onOpenChat={() => setIsChatOpen(true)}
       />
 
       <div className="main-content">
-        {currentView === 'settings' && (
-          <SettingsView
-            anthropicKey={anthropicKey}
-            shodanKey={shodanKey}
-            onAnthropicKeyChange={setAnthropicKey}
-            onShodanKeyChange={setShodanKey}
+        {currentView === 'dashboard' && (
+          <DashboardView
+            onNavigate={setCurrentView}
+            totalSources={allSources.length}
+            totalCategories={categories.length}
+            investigations={investigations}
           />
         )}
 
@@ -140,6 +148,7 @@ function App() {
             onSearchChange={setSearch}
             onOpenChat={() => setIsChatOpen(true)}
             isLoading={isLoadingSources}
+            categories={categories}
           />
         )}
 
@@ -150,11 +159,35 @@ function App() {
             isLoading={isLoadingInvestigations}
           />
         )}
+
+        {currentView === 'reports' && (
+          <ReportsView
+            investigations={investigations}
+            onRefresh={fetchInvestigations}
+          />
+        )}
+
+        {currentView === 'settings' && (
+          <SettingsView
+            anthropicKey={anthropicKey}
+            shodanKey={shodanKey}
+            onAnthropicKeyChange={setAnthropicKey}
+            onShodanKeyChange={setShodanKey}
+          />
+        )}
       </div>
 
-      <ChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      <ChatDrawer isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
       <ToastContainer />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AppProvider>
+      <AppInner />
+    </AppProvider>
   );
 }
 
