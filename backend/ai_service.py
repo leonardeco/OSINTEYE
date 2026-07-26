@@ -14,6 +14,10 @@ def get_ai_response(db: Session, query: str, history: List[Dict[str, str]] = Non
             return get_real_llm_response(db, query, anthropic_key_setting.value, history or [])
         except Exception as e:
             print(f"Error LLM: {e}")
+            # Si es error de créditos/billing, usar fallback local en vez de mostrar error
+            err_str = str(e).lower()
+            if "credit" in err_str or "billing" in err_str or "balance" in err_str or "quota" in err_str:
+                return get_fallback_response(db, query)
             return f"⚠️ Error conectando con Claude: {e}"
 
     # Fallback heuristic (no API key configured)
