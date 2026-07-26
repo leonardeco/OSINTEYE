@@ -1,7 +1,11 @@
+import os
 from fastapi import Depends, FastAPI, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+load_dotenv()
 
 import crud, models, schemas
 from database import SessionLocal, engine
@@ -13,19 +17,37 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="OSINT Catalog API")
 
-# Enable CORS for Tauri frontend and Vite dev server
+# Enable CORS for Tauri frontend and all localhost Vite dev ports
 app.add_middleware(
     CORSMiddleware,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_origins=[
         "tauri://localhost",
         "https://tauri.localhost",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+def load_env_keys():
+    """Carga API keys del .env a la base de datos si no están ya configuradas."""
+    db = SessionLocal()
+    try:
+        anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if anthropic_key and not anthropic_key.startswith("sk-ant-..."):
+            existing = crud.get_setting(db, "anthropic_api_key")
+            if not existing or not existing.value:
+                crud.set_setting(db, "anthropic_api_key", anthropic_key)
+
+        shodan_key = os.getenv("SHODAN_API_KEY", "")
+        if shodan_key and shodan_key != "your_shodan_key_here":
+            existing = crud.get_setting(db, "shodan_api_key")
+            if not existing or not existing.value:
+                crud.set_setting(db, "shodan_api_key", shodan_key)
+    finally:
+        db.close()
 
 # Dependency
 def get_db():

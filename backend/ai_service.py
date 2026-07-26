@@ -135,7 +135,7 @@ def get_real_llm_response(db: Session, query: str, api_key: str, history: List[D
     messages.append({"role": "user", "content": query})
     
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=1500,
         system=system_prompt,
         messages=messages
