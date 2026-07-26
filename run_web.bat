@@ -1,17 +1,17 @@
 @echo off
 echo ====================================================
-echo      Iniciando OSINTOJO en Modo Navegador Web
+echo      Iniciando OSINTEYE en Modo Navegador Web
 echo ====================================================
 echo.
 
-echo [1] Iniciando Backend FastAPI (Puerto 8000)...
-start "OSINTOJO Backend" cmd /k "cd backend && .\venv\Scripts\activate.bat && uvicorn main:app --port 8000 --reload"
+echo [1] Iniciando Backend FastAPI (Puerto 8002)...
+start "OSINTEYE Backend" cmd /k "cd backend && .\venv\Scripts\activate.bat && uvicorn main:app --port 8002 --reload"
 
 echo [2] Esperando a que la API encienda...
 timeout /t 3 /nobreak > nul
 
 echo [3] Iniciando Frontend React (Puerto 5173)...
-start "OSINTOJO Frontend" cmd /k "cd frontend && npm run dev"
+start "OSINTEYE Frontend" cmd /k "cd frontend && npm run dev"
 
 echo [4] Esperando a que el frontend encienda...
 timeout /t 5 /nobreak > nul
