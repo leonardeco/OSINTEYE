@@ -1,5 +1,10 @@
 import asyncio
 import json
+import sys
+from pathlib import Path
+
+# Ruta al ejecutable holehe dentro del venv activo
+_HOLEHE = str(Path(sys.executable).parent / "holehe")
 
 async def run(target: str) -> dict:
     """
@@ -13,7 +18,7 @@ async def run(target: str) -> dict:
         # Run holehe via subprocess to capture its JSON output
         # Holehe checks over 120 sites, including IG, FB, Twitter, etc.
         process = await asyncio.create_subprocess_exec(
-            "holehe", target, "--only-used", "--no-color", "--no-clear",
+            _HOLEHE, target, "--only-used", "--no-color", "--no-clear",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )

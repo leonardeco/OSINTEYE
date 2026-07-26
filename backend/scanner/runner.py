@@ -63,7 +63,7 @@ async def run_module_and_save(investigation_id: str, mod_name: str, mod_func, ta
     result_data = {}
     try:
         result_data = await asyncio.wait_for(mod_func(target), timeout=MODULE_TIMEOUT)
-        status = "error" if "error" in result_data else "success"
+        status = "error" if result_data.get("error") else "success"
     except asyncio.TimeoutError:
         result_data = {"error": f"Módulo '{mod_name}' superó el tiempo límite de {int(MODULE_TIMEOUT)}s"}
     except Exception as e:
